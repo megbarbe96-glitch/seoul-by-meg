@@ -10,28 +10,27 @@ const empty=document.getElementById("empty");
 const filters=document.getElementById("filters");
 const search=document.getElementById("search");
 const reset=document.getElementById("reset");
-let naverPreview=null;
+let placePreview=null;
 
 document.getElementById("countAll").textContent=cardPlaces.length;
 document.getElementById("countTop").textContent=cardPlaces.filter(p=>p.score>=95).length;
 document.getElementById("countNear").textContent=cardPlaces.filter(p=>["Seoul Forest","Seongsu"].includes(p.zone)).length;
 
-function installPreviewStyles(){
+function installPlacePreviewStyles(){
   const style=document.createElement("style");
   style.textContent=`
-    .naver-preview{margin-top:10px;border:1px solid var(--line);border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(54,38,63,.06)}
-    .naver-preview[hidden]{display:none!important}
-    .naver-preview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:13px 14px;background:var(--soft);border-bottom:1px solid var(--line)}
-    .naver-preview-head strong{display:block;font-size:14px}
-    .naver-preview-head span{display:block;margin-top:3px;font-size:11px;color:var(--muted);line-height:1.4}
-    .naver-preview-link{flex:0 0 auto;color:var(--ink);font-size:12px;font-weight:750;text-decoration:underline}
-    .naver-preview-media{position:relative;min-height:240px;background:#f2eef4;overflow:hidden}
-    .naver-preview-media a{display:block}
-    .naver-preview-img{display:block;width:100%;height:auto;min-height:240px;object-fit:cover;object-position:top center}
-    .naver-preview-loading{display:grid;place-items:center;min-height:240px;padding:28px;text-align:center;color:var(--muted);font-size:13px;line-height:1.5}
-    .naver-preview-loading b{display:block;margin-bottom:6px;color:var(--ink)}
-    .naver-preview-note{padding:10px 14px;font-size:10px;line-height:1.45;color:var(--muted);border-top:1px solid var(--line)}
-    @media(max-width:560px){.naver-preview-head{display:block}.naver-preview-link{display:inline-block;margin-top:9px}.naver-preview-media,.naver-preview-loading,.naver-preview-img{min-height:190px}}
+    .place-preview{margin-top:10px;border:1px solid var(--line);border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(54,38,63,.06)}
+    .place-preview[hidden]{display:none!important}
+    .place-preview-head{padding:14px;background:var(--soft);border-bottom:1px solid var(--line)}
+    .place-preview-head strong{display:block;font-size:15px}
+    .place-preview-head span{display:block;margin-top:4px;font-size:11px;color:var(--muted);line-height:1.45}
+    .place-preview-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:10px;background:#fff}
+    .place-preview-action{display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px;border:1px solid var(--line);border-radius:12px;color:var(--ink);font-size:11px;font-weight:750;text-align:center;text-decoration:none;background:#fff}
+    .place-preview-action.naver{background:var(--green);border-color:var(--green);color:#fff}
+    .place-preview-map{position:relative;background:#f4f1f5;border-top:1px solid var(--line)}
+    .place-preview-map iframe{display:block;width:100%;height:330px;border:0;background:#f4f1f5}
+    .place-preview-note{padding:10px 14px;font-size:10px;line-height:1.45;color:var(--muted);border-top:1px solid var(--line)}
+    @media(max-width:560px){.place-preview-actions{grid-template-columns:1fr}.place-preview-map iframe{height:280px}}
   `;
   document.head.appendChild(style);
 }
@@ -71,61 +70,51 @@ function getVisiblePlaces(){
     .sort((a,b)=>b.score-a.score);
 }
 
-function ensureNaverPreview(){
-  if(naverPreview) return naverPreview;
-  naverPreview=document.createElement("section");
-  naverPreview.className="naver-preview";
-  naverPreview.hidden=true;
-  popup.insertAdjacentElement("afterend",naverPreview);
-  return naverPreview;
+function ensurePlacePreview(){
+  if(placePreview) return placePreview;
+  placePreview=document.createElement("section");
+  placePreview.className="place-preview";
+  placePreview.hidden=true;
+  popup.insertAdjacentElement("afterend",placePreview);
+  return placePreview;
 }
 
-function hideNaverPreview(){
-  if(naverPreview){
-    naverPreview.hidden=true;
-    naverPreview.innerHTML="";
+function hidePlacePreview(){
+  if(placePreview){
+    placePreview.hidden=true;
+    placePreview.innerHTML="";
   }
 }
 
-function showNaverPreview(p){
-  const panel=ensureNaverPreview();
-  const screenshotUrl=`https://image.thum.io/get/width/1000/crop/1000/noanimate/maxAge/24/?url=${encodeURIComponent(p.naver)}`;
+function showPlacePreview(p){
+  const panel=ensurePlacePreview();
+  const query=encodeURIComponent(`${p.name} ${p.ko} Seoul`);
+  const naverImages=`https://search.naver.com/search.naver?where=image&query=${query}`;
+  const tiktokSearch=`https://www.tiktok.com/search?q=${query}`;
+  const googleImages=`https://www.google.com/search?tbm=isch&q=${query}`;
+  const googleMap=`https://www.google.com/maps?q=${query}&output=embed`;
 
   panel.hidden=false;
   panel.innerHTML=`
-    <div class="naver-preview-head">
-      <div>
-        <strong>Aperçu Naver · ${p.name}</strong>
-        <span>Une prévisualisation visuelle de la page pour voir les photos et l’ambiance du lieu.</span>
-      </div>
-      <a class="naver-preview-link" href="${p.naver}" target="_blank" rel="noopener">Ouvrir la page complète</a>
+    <div class="place-preview-head">
+      <strong>Voir à quoi ressemble ${p.name}</strong>
+      <span>Une vue interactive du lieu, avec des accès directs aux photos et aux contenus publiés en ligne.</span>
     </div>
-    <div class="naver-preview-media">
-      <div class="naver-preview-loading"><div><b>Chargement de l’aperçu…</b>Les photos peuvent prendre quelques secondes à apparaître.</div></div>
-      <a href="${p.naver}" target="_blank" rel="noopener" hidden>
-        <img class="naver-preview-img" src="${screenshotUrl}" alt="Aperçu de la page Naver de ${p.name}" loading="eager">
-      </a>
+    <div class="place-preview-actions">
+      <a class="place-preview-action naver" href="${naverImages}" target="_blank" rel="noopener">Photos sur Naver</a>
+      <a class="place-preview-action" href="${tiktokSearch}" target="_blank" rel="noopener">Vidéos TikTok</a>
+      <a class="place-preview-action" href="${googleImages}" target="_blank" rel="noopener">Google Images</a>
     </div>
-    <div class="naver-preview-note">Aperçu automatique d’une page externe. Le rendu peut parfois être partiel ou légèrement différé ; le bouton Naver ouvre toujours la fiche originale.</div>
+    <div class="place-preview-map">
+      <iframe src="${googleMap}" title="Vue interactive de ${p.name}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+    </div>
+    <div class="place-preview-note">La fiche interactive est fournie par Google Maps. Les photos complètes restent accessibles avec les boutons Naver, TikTok et Google Images.</div>
   `;
-
-  const image=panel.querySelector(".naver-preview-img");
-  const link=panel.querySelector(".naver-preview-media a");
-  const loading=panel.querySelector(".naver-preview-loading");
-
-  image.addEventListener("load",()=>{
-    loading.hidden=true;
-    link.hidden=false;
-  },{once:true});
-
-  image.addEventListener("error",()=>{
-    loading.innerHTML=`<div><b>Aperçu indisponible</b>Naver n’a pas permis de générer l’image pour ce lieu. Utilise « Ouvrir la page complète » pour voir ses photos.</div>`;
-  },{once:true});
 }
 
 function showPopup(p){
   popup.innerHTML=`<div class="title">${p.icon} ${p.name}</div><div class="ko">${p.ko}</div><div class="meta">${p.zone} · ${p.cat} · score Még ${p.score}<br>${p.best} · ${p.travel}<br>${p.why}</div><a class="naver-btn" href="${p.naver}" target="_blank" rel="noopener">Ouvrir dans Naver</a>`;
-  showNaverPreview(p);
+  showPlacePreview(p);
 }
 
 function selectPlaceOnMap(p){
@@ -228,7 +217,7 @@ function render(){
 search.addEventListener("input",e=>{
   state.query=e.target.value;
   state.activeId="";
-  hideNaverPreview();
+  hidePlacePreview();
   render();
 });
 
@@ -236,7 +225,7 @@ reset.addEventListener("click",()=>{
   state={filter:"",query:"",activeId:""};
   search.value="";
   filters.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));
-  hideNaverPreview();
+  hidePlacePreview();
   render();
 });
 
@@ -246,7 +235,7 @@ filters.querySelectorAll(".filter").forEach(btn=>btn.addEventListener("click",()
   state.query="";
   state.activeId="";
   search.value="";
-  hideNaverPreview();
+  hidePlacePreview();
 
   filters.querySelectorAll(".filter").forEach(x=>{
     x.classList.toggle("active",x===btn&&state.filter!==""&&btn.dataset.filter!=="all");
@@ -264,6 +253,6 @@ filters.querySelectorAll(".filter").forEach(btn=>btn.addEventListener("click",()
   }
 }));
 
-installPreviewStyles();
+installPlacePreviewStyles();
 createPins();
 render();
