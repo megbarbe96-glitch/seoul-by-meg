@@ -30,21 +30,22 @@ function isNear(p){
   return ["Seoul Forest","Seongsu","Eungbong"].includes(p.zone);
 }
 
-function matchFilter(p){
+function matchesCategory(p){
   if(!state.filter) return true;
   if(state.filter==="near") return isNear(p);
   if(state.filter==="must") return Boolean(p.must);
+  if(state.filter==="tiktok") return Boolean(p.tiktok);
   if(state.filter==="food") return ["Restaurant","Café","Dessert","Bibimbap","Tteokbokki"].includes(p.cat);
   if(state.filter==="kfood") return ["Bibimbap","Tteokbokki"].includes(p.cat);
   return tagOf(p)===state.filter;
 }
 
-function filtered(){
+function getVisiblePlaces(){
   const q=state.query.trim().toLowerCase();
   return cardPlaces
     .filter(p=>{
       const hay=`${p.name} ${p.ko} ${p.zone} ${p.cat} ${p.why}`.toLowerCase();
-      return matchFilter(p)&&(!q||hay.includes(q));
+      return matchesCategory(p)&&(!q||hay.includes(q));
     })
     .sort((a,b)=>b.score-a.score);
 }
@@ -67,17 +68,18 @@ function createPins(){
       state.activeId=p.id;
       showPopup(p);
       if(!p.hidden_card){
-        renderCards();
+        const visiblePlaces=getVisiblePlaces();
+        renderCards(visiblePlaces);
         document.getElementById("card-"+p.id)?.scrollIntoView({behavior:"smooth",block:"center"});
       }
-      renderPins();
+      renderPins(getVisiblePlaces());
     });
     frame.appendChild(pin);
   });
 }
 
-function renderPins(){
-  const visibleIds=new Set(filtered().map(p=>p.id));
+function renderPins(visiblePlaces){
+  const visibleIds=new Set(visiblePlaces.map(p=>p.id));
   const filtering=Boolean(state.filter||state.query.trim());
 
   document.querySelectorAll(".pin").forEach(pin=>{
@@ -95,23 +97,23 @@ function renderPins(){
   });
 }
 
-function renderCards(){
-  const arr=filtered();
-  status.textContent=`${arr.length} lieu${arr.length>1?"x":""} affiché${arr.length>1?"s":""}`;
+function renderCards(visiblePlaces){
+  status.textContent=`${visiblePlaces.length} lieu${visiblePlaces.length>1?"x":""} affiché${visiblePlaces.length>1?"s":""}`;
   cards.innerHTML="";
-  empty.style.display=arr.length?"none":"block";
+  empty.style.display=visiblePlaces.length?"none":"block";
 
-  arr.forEach(p=>{
+  visiblePlaces.forEach(p=>{
     const el=document.createElement("article");
     el.className="place"+(state.activeId===p.id?" active":"");
     el.id="card-"+p.id;
-    el.innerHTML=`<div class="top"><div><h3>${p.icon} ${p.name}</h3><div class="ko">${p.ko}</div></div><div class="score"><b>${p.score}</b><small>Még</small></div></div><div class="tags"><span class="tag">${p.zone}</span><span class="tag">${p.cat}</span>${p.must?'<span class="tag">⭐ Incontournable</span>':""}</div><p>${p.why}</p><div class="info"><div><strong>Meilleur moment</strong><br>${p.best}</div><div><strong>Depuis chez toi</strong><br>${p.travel}</div></div><div class="actions"><a class="btn green" href="${p.naver}" target="_blank" rel="noopener">Naver Map</a><button class="btn focus" type="button">Voir sur la carte</button></div>`;
+    el.innerHTML=`<div class="top"><div><h3>${p.icon} ${p.name}</h3><div class="ko">${p.ko}</div></div><div class="score"><b>${p.score}</b><small>Még</small></div></div><div class="tags"><span class="tag">${p.zone}</span><span class="tag">${p.cat}</span>${p.must?'<span class="tag">⭐ Incontournable</span>':""}${p.tiktok?'<span class="tag">🔥 TikTok trend</span>':""}</div><p>${p.why}</p><div class="info"><div><strong>Meilleur moment</strong><br>${p.best}</div><div><strong>Depuis chez toi</strong><br>${p.travel}</div></div><div class="actions"><a class="btn green" href="${p.naver}" target="_blank" rel="noopener">Naver Map</a><button class="btn focus" type="button">Voir sur la carte</button></div>`;
 
     el.querySelector(".focus").addEventListener("click",()=>{
       state.activeId=p.id;
       showPopup(p);
-      renderPins();
-      renderCards();
+      const currentPlaces=getVisiblePlaces();
+      renderPins(currentPlaces);
+      renderCards(currentPlaces);
       document.querySelector(".map-panel").scrollIntoView({behavior:"smooth",block:"start"});
     });
 
@@ -120,8 +122,9 @@ function renderCards(){
 }
 
 function render(){
-  renderPins();
-  renderCards();
+  const visiblePlaces=getVisiblePlaces();
+  renderPins(visiblePlaces);
+  renderCards(visiblePlaces);
 }
 
 search.addEventListener("input",e=>{
@@ -140,7 +143,9 @@ reset.addEventListener("click",()=>{
 filters.querySelectorAll(".filter").forEach(btn=>btn.addEventListener("click",()=>{
   const f=btn.dataset.filter==="all"?"":btn.dataset.filter;
   state.filter=state.filter===f?"":f;
+  state.query="";
   state.activeId="";
+  search.value="";
 
   filters.querySelectorAll(".filter").forEach(x=>{
     x.classList.toggle("active",x===btn&&state.filter!==""&&btn.dataset.filter!=="all");
@@ -151,6 +156,11 @@ filters.querySelectorAll(".filter").forEach(btn=>btn.addEventListener("click",()
   }
 
   render();
+
+  const firstCard=cards.querySelector(".place");
+  if(firstCard){
+    firstCard.scrollIntoView({behavior:"smooth",block:"start"});
+  }
 }));
 
 createPins();
