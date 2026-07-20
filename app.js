@@ -54,6 +54,20 @@ function showPopup(p){
   popup.innerHTML=`<div class="title">${p.icon} ${p.name}</div><div class="ko">${p.ko}</div><div class="meta">${p.zone} · ${p.cat} · score Még ${p.score}<br>${p.best} · ${p.travel}<br>${p.why}</div><a class="naver-btn" href="${p.naver}" target="_blank" rel="noopener">Ouvrir dans Naver</a>`;
 }
 
+function selectPlaceOnMap(p){
+  state.activeId=p.id;
+  showPopup(p);
+
+  const currentPlaces=getVisiblePlaces();
+  renderPins(currentPlaces);
+  renderCards(currentPlaces);
+
+  document.querySelector(".map-panel").scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+}
+
 function createPins(){
   mapPlaces.forEach(p=>{
     const pin=document.createElement("button");
@@ -106,15 +120,25 @@ function renderCards(visiblePlaces){
     const el=document.createElement("article");
     el.className="place"+(state.activeId===p.id?" active":"");
     el.id="card-"+p.id;
+    el.tabIndex=0;
+    el.style.cursor="pointer";
+    el.setAttribute("aria-label",`Afficher ${p.name} sur la carte`);
     el.innerHTML=`<div class="top"><div><h3>${p.icon} ${p.name}</h3><div class="ko">${p.ko}</div></div><div class="score"><b>${p.score}</b><small>Még</small></div></div><div class="tags"><span class="tag">${p.zone}</span><span class="tag">${p.cat}</span>${p.must?'<span class="tag">⭐ Incontournable</span>':""}${p.tiktok?'<span class="tag">🔥 TikTok trend</span>':""}</div><p>${p.why}</p><div class="info"><div><strong>Meilleur moment</strong><br>${p.best}</div><div><strong>Depuis chez toi</strong><br>${p.travel}</div></div><div class="actions"><a class="btn green" href="${p.naver}" target="_blank" rel="noopener">Naver Map</a><button class="btn focus" type="button">Voir sur la carte</button></div>`;
 
+    el.addEventListener("click",event=>{
+      if(event.target.closest("a,button")) return;
+      selectPlaceOnMap(p);
+    });
+
+    el.addEventListener("keydown",event=>{
+      if(event.key!=="Enter"&&event.key!==" ") return;
+      if(event.target.closest("a,button")) return;
+      event.preventDefault();
+      selectPlaceOnMap(p);
+    });
+
     el.querySelector(".focus").addEventListener("click",()=>{
-      state.activeId=p.id;
-      showPopup(p);
-      const currentPlaces=getVisiblePlaces();
-      renderPins(currentPlaces);
-      renderCards(currentPlaces);
-      document.querySelector(".map-panel").scrollIntoView({behavior:"smooth",block:"start"});
+      selectPlaceOnMap(p);
     });
 
     cards.appendChild(el);
